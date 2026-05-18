@@ -2,28 +2,31 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient.js'
 
 export default function Dashboard() {
-  const [status, setStatus] = useState('Checking Supabase connection...')
+  const [divisions, setDivisions] = useState([])
+  const [status, setStatus] = useState('Connecting to database...')
 
   useEffect(() => {
-    async function testConnection() {
-      try {
-        const { error } = await supabase.auth.getSession()
-        if (error) {
-          setStatus('❌ Supabase connection failed: ' + error.message)
-        } else {
-          setStatus('✅ Supabase connected successfully')
-        }
-      } catch (err) {
-        setStatus('❌ Connection error: ' + err.message)
+    async function fetchDivisions() {
+      const { data, error } = await supabase.from('divisions').select('*')
+      if (error) {
+        setStatus('❌ Database error: ' + error.message)
+      } else {
+        setDivisions(data)
+        setStatus('✅ Supabase connected — ' + data.length + ' divisions found')
       }
     }
-    testConnection()
+    fetchDivisions()
   }, [])
 
   return (
     <div style={{ padding: '40px' }}>
       <h1>Dashboard</h1>
       <p>{status}</p>
+      <ul>
+        {divisions.map(d => (
+          <li key={d.id}>{d.name}</li>
+        ))}
+      </ul>
     </div>
   )
 }
