@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom'
 
 import Dashboard from './pages/Dashboard.jsx'
 import Inventory from './pages/Inventory.jsx'
+import InventoryAdmin from './pages/InventoryAdmin.jsx'
 import Jobs from './pages/Jobs.jsx'
+import JobDetail from './pages/JobDetail.jsx'
 import Vehicles from './pages/Vehicles.jsx'
 import QuickTakeoff from './pages/QuickTakeoff.jsx'
 import Estimator from './pages/Estimator.jsx'
@@ -65,7 +67,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/admin" element={<InventoryAdmin />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/jobs/:id" element={<JobDetail />} />
           <Route path="/vehicles" element={<Vehicles />} />
           <Route path="/quick-takeoff" element={<QuickTakeoff />} />
           <Route path="/estimator" element={<Estimator />} />
