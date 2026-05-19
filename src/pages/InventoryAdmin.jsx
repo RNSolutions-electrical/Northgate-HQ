@@ -354,15 +354,34 @@ async function addUnit() {
             </div>
           ))}
 <div style={{ marginTop: '20px', borderTop: '1px solid #ddd', paddingTop: '16px' }}>
-            <h4 style={{ margin: '0 0 12px' }}>Add Item to Bin</h4>
+           <h4 style={{ margin: '0 0 12px' }}>Add Item to Bin</h4>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              <select value={selectedBroadCat}
+                onChange={e => { setSelectedBroadCat(e.target.value); setSelectedItem(''); setItemSearch('') }}
+                style={{ ...s.input, flex: 1, minWidth: '160px' }}>
+                <option value=''>— All Categories —</option>
+                {broadCats.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={selectedSubCat}
+                onChange={e => { setSelectedSubCat(e.target.value); setSelectedItem('') }}
+                disabled={!selectedBroadCat}
+                style={{ ...s.input, flex: 1, minWidth: '160px', opacity: selectedBroadCat ? 1 : 0.5 }}>
+                <option value=''>— All Sub-Categories —</option>
+                {subCats.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
             <div style={{ position: 'relative' }}>
-              <input placeholder="Search by name or material code..." value={itemSearch}
-                onChange={e => { setItemSearch(e.target.value); searchItems(e.target.value) }}
+              <input placeholder="Filter by name or material code..."
+                value={itemSearch}
+                onChange={e => searchItems(e.target.value)}
                 style={{ ...s.input, width: '100%', boxSizing: 'border-box' }} />
               {allItems.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '4px', zIndex: 10, maxHeight: '200px', overflowY: 'auto' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '4px', zIndex: 10, maxHeight: '220px', overflowY: 'auto' }}>
                   {allItems.map(item => (
-                    <div key={item.id} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #eee', fontSize: '13px' }}
+                    <div key={item.id}
+                      style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #eee', fontSize: '13px', background: selectedItem === item.id ? '#f0f4ff' : '#fff' }}
                       onClick={() => { setSelectedItem(item.id); setItemSearch(item.name); setAllItems([]) }}>
                       <strong>{item.name}</strong>
                       <span style={{ color: '#888', marginLeft: '8px' }}>{item.material_code}</span>
@@ -371,14 +390,22 @@ async function addUnit() {
                 </div>
               )}
             </div>
+
             <div style={s.addRow}>
-              <input type="number" placeholder="Qty" value={newQty} onChange={e => setNewQty(e.target.value)} style={{ ...s.input, width: '80px' }} />
-              <input type="number" placeholder="Min Qty" value={newMinQty} onChange={e => setNewMinQty(e.target.value)} style={{ ...s.input, width: '80px' }} />
-              <button style={{ ...s.btn, ...s.primary }} onClick={addBinItem} disabled={!selectedItem || !newQty}>+ Add to Bin</button>
+              <input type="number" placeholder="Qty" value={newQty}
+                onChange={e => setNewQty(e.target.value)}
+                style={{ ...s.input, width: '80px' }} />
+              <input type="number" placeholder="Min Qty" value={newMinQty}
+                onChange={e => setNewMinQty(e.target.value)}
+                style={{ ...s.input, width: '80px' }} />
+              <button style={{ ...s.btn, ...s.primary }}
+                onClick={addBinItem}
+                disabled={!selectedItem || !newQty}>
+                + Add to Bin
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>      )}
 
       {qrTarget && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
