@@ -5,6 +5,7 @@ export default function QRScanner({ onScan, onCancel }) {
   const scannerRef = useRef(null)
   const isRunningRef = useRef(false)
   const startedRef = useRef(false)
+  const scannedRef = useRef(false)
   const elementId = 'qr-reader'
 
   function safeStop(callback) {
@@ -28,9 +29,10 @@ export default function QRScanner({ onScan, onCancel }) {
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 250, height: 250 } },
       (decodedText) => {
-        isRunningRef.current = false
-        onScan(decodedText.trim())
-      },
+  if (scannedRef.current) return
+  scannedRef.current = true
+  safeStop(() => onScan(decodedText.trim()))
+},
       () => {}
     ).then(() => {
       isRunningRef.current = true
