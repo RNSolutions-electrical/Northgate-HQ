@@ -41,9 +41,9 @@ export default function QRScanner({ onScan, onCancel }) {
           style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', marginRight: '8px', width: '120px' }}
           onKeyDown={e => {
   if (e.key === 'Enter' && e.target.value.trim()) {
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch(() => {})
-    }
+    try {
+      if (scannerRef.current) scannerRef.current.stop()
+    } catch (_) {}
     onScan(e.target.value.trim().toUpperCase())
   }
 }}
