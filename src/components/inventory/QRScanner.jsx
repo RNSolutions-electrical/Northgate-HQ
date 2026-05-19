@@ -3,8 +3,19 @@ import { Html5Qrcode } from 'html5-qrcode'
 
 export default function QRScanner({ onScan, onCancel }) {
   const scannerRef = useRef(null)
+  const isRunningRef = useRef(false)
   const startedRef = useRef(false)
   const elementId = 'qr-reader'
+
+  function safeStop(callback) {
+    if (scannerRef.current && isRunningRef.current) {
+      scannerRef.current.stop()
+        .then(() => { isRunningRef.current = false; callback?.() })
+        .catch(() => { isRunningRef.current = false; callback?.() })
+    } else {
+      callback?.()
+    }
+  }
 
   useEffect(() => {
     if (startedRef.current) return
@@ -17,14 +28,17 @@ export default function QRScanner({ onScan, onCancel }) {
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 250, height: 250 } },
       (decodedText) => {
-        scanner.stop().then(() => onScan(decodedText.trim())).catch(() => onScan(decodedText.trim()))
+        isRunningRef.current = false
+        onScan(decodedText.trim())
       },
       () => {}
-    ).catch(err => console.error('Camera error:', err))
+    ).then(() => {
+      isRunningRef.current = true
+    }).catch(err => {
+      console.error('Camera error:', err)
+    })
 
-    return () => {
-      scannerRef.current?.stop().catch(() => {})
-    }
+    return () => safeStop()
   }, [])
 
   return (
@@ -40,19 +54,17 @@ export default function QRScanner({ onScan, onCancel }) {
           placeholder="e.g. A12 or A123"
           style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', marginRight: '8px', width: '120px' }}
           onKeyDown={e => {
-  if (e.key === 'Enter' && e.target.value.trim()) {
-    try {
-      if (scannerRef.current) scannerRef.current.stop()
-    } catch (_) {}
-    onScan(e.target.value.trim().toUpperCase())
-  }
-}}
+            if (e.key === 'Enter' && e.target.value.trim()) {
+              const code = e.target.value.trim().toUpperCase()
+              safeStop(() => onScan(code))
+            }
+          }}
         />
         <span style={{ fontSize: '12px', color: '#888' }}>Press Enter to scan</span>
       </div>
 
       <button
-        onClick={() => { scannerRef.current?.stop().catch(() => {}); onCancel() }}
+        onClick={() => safeStop(onCancel)}
         style={{ marginTop: '16px', padding: '12px 32px', background: '#e94560', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}
       >
         Cancel
