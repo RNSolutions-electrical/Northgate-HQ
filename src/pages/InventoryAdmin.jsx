@@ -164,7 +164,57 @@ async function searchItems(query) {
     if (!confirm('Remove this item from the bin?')) return
     await supabase.from('bin_items').delete().eq('id', id); fetchBinItems()
   }
-
+async function addUnit() {
+    if (!newUnitCode) return
+    const { error } = await supabase.from('units').insert({ division_id: division.id, code: newUnitCode.toUpperCase(), label: newUnitLabel || null })
+    if (!error) { setNewUnitCode(''); setNewUnitLabel(''); fetchUnits() } else setStatus('Error: ' + error.message)
+  }
+  async function deleteUnit(id) {
+    if (!confirm('Delete this unit and all its contents?')) return
+    await supabase.from('units').delete().eq('id', id); fetchUnits()
+  }
+  async function addShelf() {
+    if (!newShelfNum) return
+    const { error } = await supabase.from('shelves').insert({ unit_id: unit.id, number: parseInt(newShelfNum) })
+    if (!error) { setNewShelfNum(''); fetchShelves() } else setStatus('Error: ' + error.message)
+  }
+  async function deleteShelf(id) {
+    if (!confirm('Delete this shelf and all its contents?')) return
+    await supabase.from('shelves').delete().eq('id', id); fetchShelves()
+  }
+  async function addBay() {
+    if (!newBayNum) return
+    const bayCode = unit.code + shelf.number + newBayNum
+    const { error } = await supabase.from('bays').insert({ shelf_id: shelf.id, number: parseInt(newBayNum), bay_code: bayCode })
+    if (!error) { setNewBayNum(''); fetchBays() } else setStatus('Error: ' + error.message)
+  }
+  async function deleteBay(id) {
+    if (!confirm('Delete this bay and all its contents?')) return
+    await supabase.from('bays').delete().eq('id', id); fetchBays()
+  }
+  async function addBin() {
+    if (!newBinNum) return
+    const binCode = bay.bay_code + newBinNum
+    const { error } = await supabase.from('bins').insert({ bay_id: bay.id, number: parseInt(newBinNum), bin_code: binCode, position: parseInt(newBinPos) || bins.length + 1 })
+    if (!error) { setNewBinNum(''); setNewBinPos(''); fetchBins() } else setStatus('Error: ' + error.message)
+  }
+  async function deleteBin(id) {
+    if (!confirm('Delete this bin and all its contents?')) return
+    await supabase.from('bins').delete().eq('id', id); fetchBins()
+  }
+  async function addBinItem() {
+    if (!selectedItem || !newQty) return
+    const { error } = await supabase.from('bin_items').insert({ bin_id: bin.id, item_id: selectedItem, quantity: parseFloat(newQty), min_quantity: parseFloat(newMinQty) || 0 })
+    if (!error) { setSelectedItem(''); setNewQty(''); setNewMinQty(''); setItemSearch(''); setAllItems([]); fetchBinItems() }
+    else setStatus('Error: ' + error.message)
+  }
+  async function updateQty(id, field, value) {
+    await supabase.from('bin_items').update({ [field]: parseFloat(value), updated_at: new Date().toISOString() }).eq('id', id)
+  }
+  async function removeBinItem(id) {
+    if (!confirm('Remove this item from the bin?')) return
+    await supabase.from('bin_items').delete().eq('id', id); fetchBinItems()
+  }
   const level = bin ? 'bin' : bay ? 'bins' : shelf ? 'bays' : unit ? 'shelves' : 'units'
 
   return (
