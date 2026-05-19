@@ -41,7 +41,10 @@ export default function InventoryAdmin() {
   const [itemSearch, setItemSearch] = useState('')
   const [qrTarget, setQrTarget] = useState(null)
   const [status, setStatus] = useState('')
-
+  const [broadCats, setBroadCats] = useState([])
+  const [subCats, setSubCats] = useState([])
+  const [selectedBroadCat, setSelectedBroadCat] = useState('')
+  const [selectedSubCat, setSelectedSubCat] = useState('')
   useEffect(() => {
     supabase.from('divisions').select('*').then(({ data }) => {
       if (data) { setDivisions(data); setDivision(data.find(d => d.name === 'Electrical') || data[0]) }
@@ -53,7 +56,30 @@ export default function InventoryAdmin() {
   useEffect(() => { if (shelf) { setBay(null); setBin(null); fetchBays() } }, [shelf])
   useEffect(() => { if (bay) { setBin(null); fetchBins() } }, [bay])
   useEffect(() => { if (bin) fetchBinItems() }, [bin])
+  useEffect(() => {
+  if (!division) return
+  supabase.from('items').select('broad_category').eq('division_id', division.id)
+    .then(({ data }) => {
+      if (data) setBroadCats([...new Set(data.map(d => d.broad_category).filter(Boolean))].sort())
+    })
+}, [division])
 
+useEffect(() => {
+  setSelectedSubCat('')
+  setSubCats([])
+  if (!selectedBroadCat || !division) return
+  supabase.from('items').select('sub_category')
+    .eq('division_id', division.id)
+    .eq('broad_category', selectedBroadCat)
+    .then(({ data }) => {
+      if (data) setSubCats([...new Set(data.map(d => d.sub_category).filter(Boolean))].sort())
+    })
+  runSearch(itemSearch)
+}, [selectedBroadCat])
+
+useEffect(() => {
+  runSearch(itemSearch)
+}, [selectedSubCat])
   async function fetchUnits() {
     const { data } = await supabase.from('units').select('*').eq('division_id', division.id).order('code')
     if (data) setUnits(data)
@@ -75,20 +101,23 @@ export default function InventoryAdmin() {
     if (data) setBinItems(data)
   }
 
-  async function searchItems(query) {
-    if (!query || query.length < 2) { setAllItems([]); return }
-    const { data } = await supabase.from('items').select('id, name, material_code, unit_of_measure')
-      .eq('division_id', division.id)
-      .or(`name.ilike.%${query}%,material_code.ilike.%${query}%`)
-      .limit(20)
-    if (data) setAllItems(data)
-  }
+  async function runSearch(query) {
+  if (!selectedBroadCat && (!query || query.length < 2)) { setAllItems([]); return }
+  let q = supabase.from('items')
+    .select('id, name, material_code, unit_of_measure, sub_category')
+    .eq('division_id', division.id)
+    .limit(40)
+  if (selectedBroadCat) q = q.eq('broad_category', selectedBroadCat)
+  if (selectedSubCat) q = q.eq('sub_category', selectedSubCat)
+  if (query && query.length >= 2) q = q.or(`name.ilike.%${query}%,material_code.ilike.%${query}%`)
+  const { data } = await q
+  if (data) setAllItems(data)
+}
 
-  async function addUnit() {
-    if (!newUnitCode) return
-    const { error } = await supabase.from('units').insert({ division_id: division.id, code: newUnitCode.toUpperCase(), label: newUnitLabel || null })
-    if (!error) { setNewUnitCode(''); setNewUnitLabel(''); fetchUnits() } else setStatus('Error: ' + error.message)
-  }
+async function searchItems(query) {
+  setItemSearch(query)
+  runSearch(query)
+}
   async function deleteUnit(id) {
     if (!confirm('Delete this unit and all its contents?')) return
     await supabase.from('units').delete().eq('id', id); fetchUnits()
@@ -274,8 +303,7 @@ export default function InventoryAdmin() {
               </div>
             </div>
           ))}
-
-          <div style={{ marginTop: '20px', borderTop: '1px solid #ddd', paddingTop: '16px' }}>
+<div style={{ marginTop: '20px', borderTop: '1px solid #ddd', paddingTop: '16px' }}>
             <h4 style={{ margin: '0 0 12px' }}>Add Item to Bin</h4>
             <div style={{ position: 'relative' }}>
               <input placeholder="Search by name or material code..." value={itemSearch}
