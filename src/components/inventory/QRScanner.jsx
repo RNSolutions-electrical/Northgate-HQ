@@ -28,7 +28,7 @@ export default function QRScanner({ onScan, onCancel }) {
   }, [])
 
   return (
-     <div style={{ padding: '20px', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
       <h2>Scan QR Code</h2>
       <p style={{ color: '#666', fontSize: '14px' }}>Point camera at a bay or bin QR code</p>
       <div id={elementId} style={{ width: '100%' }} />
