@@ -16,6 +16,12 @@ const s = {
 }
 
 export default function Inventory() {
+  const [broadCats, setBroadCats] = useState([])
+  const [subCats, setSubCats] = useState([])
+  const [selectedBroadCat, setSelectedBroadCat] = useState('')
+  const [selectedSubCat, setSelectedSubCat] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
   const { user } = useUser()
   const [divisions, setDivisions] = useState([])
   const [division, setDivision] = useState('Electrical')
@@ -31,6 +37,30 @@ export default function Inventory() {
   useEffect(() => {
     supabase.from('divisions').select('*').then(({ data }) => { if (data) setDivisions(data) })
   }, [])
+
+  useEffect(() => {
+  if (!divisions.length) return
+  const div = divisions.find(d => d.name === division)
+  if (!div) return
+  supabase.from('items').select('broad_category').eq('division_id', div.id)
+    .then(({ data }) => {
+      if (data) setBroadCats([...new Set(data.map(d => d.broad_category).filter(Boolean))].sort())
+    })
+}, [division, divisions])
+
+  useEffect(() => {
+  setSelectedSubCat('')
+  setSubCats([])
+  if (!selectedBroadCat) return
+  const div = divisions.find(d => d.name === division)
+  if (!div) return
+  supabase.from('items').select('sub_category')
+    .eq('division_id', div.id)
+    .eq('broad_category', selectedBroadCat)
+    .then(({ data }) => {
+      if (data) setSubCats([...new Set(data.map(d => d.sub_category).filter(Boolean))].sort())
+    })
+}, [selectedBroadCat])
 
   async function handleScan(code) {
     setStatus('Looking up ' + code + '...')
@@ -80,6 +110,45 @@ export default function Inventory() {
       quantity_in: inn,
       current_quantity: binItem.quantity,
     }
+
+  async function runItemSearch() {
+   const div = divisions.find(d => d.name === division)
+   if (!div) return
+   if (!selectedBroadCat && (!searchQuery || searchQuery.length < 2)) {
+     setSearchResults([]); return
+  }
+  let q = supabase.from('items')
+    .select(`
+      id, name, material_code, unit_of_measure, price_per_unit,
+      bin_items (
+        id, quantity, min_quantity,
+        bins ( id, bin_code, bays ( bay_code ) )
+      )
+    `)
+    .eq('division_id', div.id)
+    .limit(30)
+  if (selectedBroadCat) q = q.eq('broad_category', selectedBroadCat)
+  if (selectedSubCat) q = q.eq('sub_category', selectedSubCat)
+  if (searchQuery && searchQuery.length >= 2) q = q.or(`name.ilike.%${searchQuery}%,material_code.ilike.%${searchQuery}%`)
+  const { data } = await q
+  if (data) setSearchResults(data)
+}
+
+  function addSearchItemToTransaction(binItem, item) {
+    const syntheticBinItem = {
+     id: binItem.id,
+     quantity: binItem.quantity,
+     min_quantity: binItem.min_quantity,
+     items: {
+       id: item.id,
+       name: item.name,
+       material_code: item.material_code,
+       unit_of_measure: item.unit_of_measure,
+       price_per_unit: item.price_per_unit
+    }
+  }
+  addToTransaction(syntheticBinItem, binItem.bins.bin_code)
+}
 
     setTransaction(prev => {
       const idx = prev.findIndex(t => t.bin_item_id === binItem.id)
@@ -166,6 +235,12 @@ export default function Inventory() {
             📷 Scan QR Code
           </button>
 
+          <button
+            style={{ ...s.btn, ...s.ghost, width: '100%', padding: '14px', fontSize: '16px', marginBottom: '20px' }}
+            onClick={() => setMode('search')}>
+            🔍 Search Inventory
+          </button>
+
           {transaction.length > 0 && (
             <div style={s.card}>
               <h3 style={{ margin: '0 0 12px' }}>Current Transaction — {transaction.length} item{transaction.length !== 1 ? 's' : ''}</h3>
@@ -189,6 +264,103 @@ export default function Inventory() {
           )}
         </>
       )}
+
+{mode === 'search' && (
+  <>
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+      <button style={{ ...s.btn, ...s.ghost }} onClick={() => { setMode('home'); setSearchResults([]); setSearchQuery(''); setSelectedBroadCat(''); setSelectedSubCat('') }}>← Back</button>
+      {transaction.length > 0 && (
+        <button style={{ ...s.btn, ...s.accent }} onClick={() => setMode('submit')}>Submit ({transaction.length})</button>
+      )}
+    </div>
+
+    <h2>Search Inventory</h2>
+
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+      <select value={selectedBroadCat}
+        onChange={e => { setSelectedBroadCat(e.target.value); setSearchQuery(''); setSearchResults([]) }}
+        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', flex: 1, minWidth: '160px' }}>
+        <option value=''>— All Categories —</option>
+        {broadCats.map(c => <option key={c} value={c}>{c}</option>)}
+      </select>
+      <select value={selectedSubCat}
+        onChange={e => setSelectedSubCat(e.target.value)}
+        disabled={!selectedBroadCat}
+        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', flex: 1, minWidth: '160px', opacity: selectedBroadCat ? 1 : 0.5 }}>
+        <option value=''>— All Sub-Categories —</option>
+        {subCats.map(c => <option key={c} value={c}>{c}</option>)}
+      </select>
+    </div>
+
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      <input
+        type="text"
+        placeholder="Filter by name or material code..."
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && runItemSearch()}
+        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', flex: 1 }}
+      />
+      <button style={{ ...s.btn, ...s.primary }} onClick={runItemSearch}>Search</button>
+    </div>
+
+    {searchResults.length === 0 && (selectedBroadCat || searchQuery.length >= 2) && (
+      <p style={{ color: '#888' }}>No items found.</p>
+    )}
+
+    {searchResults.map(item => (
+      <div key={item.id} style={{ ...s.card, marginBottom: '12px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{item.name}</div>
+          <div style={{ fontSize: '12px', color: '#888' }}>{item.material_code} · {item.unit_of_measure}</div>
+        </div>
+
+        {item.bin_items.length === 0 && (
+          <p style={{ color: '#aaa', fontSize: '13px', margin: 0 }}>Not assigned to any bin</p>
+        )}
+
+        {item.bin_items.map(bi => {
+          const adj = adjustments[bi.id] || {}
+          const inCart = transaction.find(t => t.bin_item_id === bi.id)
+          return (
+            <div key={bi.id} style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '6px', padding: '10px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div>
+                  <span style={{ fontWeight: 'bold', fontSize: '13px' }}>📍 Bin {bi.bins?.bin_code}</span>
+                  <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px' }}>Bay {bi.bins?.bays?.bay_code}</span>
+                </div>
+                <div style={{ fontSize: '13px' }}>
+                  Stock: <strong>{bi.quantity}</strong>
+                  {inCart && <span style={{ marginLeft: '8px', background: '#e94560', color: '#fff', padding: '1px 6px', borderRadius: '10px', fontSize: '11px' }}>In cart</span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div>
+                  <label style={s.label}>Taking out</label>
+                  <input type="number" min="0" value={adj.out || ''}
+                    onChange={e => updateAdj(bi.id, 'out', e.target.value)}
+                    style={s.numInput} placeholder="0" />
+                </div>
+                <div>
+                  <label style={s.label}>Putting back</label>
+                  <input type="number" min="0" value={adj.in || ''}
+                    onChange={e => updateAdj(bi.id, 'in', e.target.value)}
+                    style={s.numInput} placeholder="0" />
+                </div>
+                <button
+                  style={{ ...s.btn, ...s.primary, opacity: (!adj.out && !adj.in) ? 0.5 : 1 }}
+                  onClick={() => addSearchItemToTransaction(bi, item)}
+                  disabled={!adj.out && !adj.in}>
+                  {inCart ? 'Update' : 'Add to Transaction'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    ))}
+  </>
+)}
 
       {mode === 'result' && (
         <>
