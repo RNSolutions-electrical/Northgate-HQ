@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { supabase } from '../supabaseClient.js'
@@ -155,6 +156,11 @@ export default function Inventory() {
 
       {mode === 'home' && (
         <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+  <Link to="/inventory/admin" style={{ ...s.btn, ...s.ghost, textDecoration: 'none', fontSize: '13px' }}>
+    ⚙️ Admin
+  </Link>
+</div>
           <button style={{ ...s.btn, ...s.primary, width: '100%', padding: '18px', fontSize: '18px', marginBottom: '20px' }}
             onClick={() => setMode('scanning')}>
             📷 Scan QR Code

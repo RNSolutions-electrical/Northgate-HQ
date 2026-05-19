@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn, UserButton } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
-
+import InventoryAdmin from './pages/InventoryAdmin.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Inventory from './pages/Inventory.jsx'
 import Jobs from './pages/Jobs.jsx'
@@ -64,6 +64,7 @@ export default function App() {
         <NavBar />
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/inventory/admin" element={<InventoryAdmin />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/vehicles" element={<Vehicles />} />
