@@ -40,11 +40,13 @@ export default function QRScanner({ onScan, onCancel }) {
           placeholder="e.g. A12 or A123"
           style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', marginRight: '8px', width: '120px' }}
           onKeyDown={e => {
-            if (e.key === 'Enter' && e.target.value.trim()) {
-              scannerRef.current?.stop().catch(() => {})
-              onScan(e.target.value.trim().toUpperCase())
-            }
-          }}
+  if (e.key === 'Enter' && e.target.value.trim()) {
+    if (scannerRef.current) {
+      scannerRef.current.stop().catch(() => {})
+    }
+    onScan(e.target.value.trim().toUpperCase())
+  }
+}}
         />
         <span style={{ fontSize: '12px', color: '#888' }}>Press Enter to scan</span>
       </div>
