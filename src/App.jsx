@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn, UserButton } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
-import InventoryAdmin from './pages/InventoryAdmin.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Inventory from './pages/Inventory.jsx'
 import InventoryAdmin from './pages/InventoryAdmin.jsx'
